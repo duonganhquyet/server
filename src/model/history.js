@@ -1,27 +1,13 @@
 import mongoose from "mongoose";
 
 const HistorySchema = new mongoose.Schema({
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    },
-    track: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Song",
-        required: true
-    },
-    listenedAt: {
-        type: Date,
-        default: Date.now
-    },
-    isDeleted: {
-        type: Boolean,
-        default: false
-    }
-}, {
+    user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    song_id: { type: mongoose.Schema.Types.ObjectId, ref: "Song", required: true },
+    action: { type: String, default: 'listen' }
+}, { 
     timestamps: true,
-    versionKey: false
+    versionKey: false,
+    collection: 'history'
 });
 
 export default mongoose.model("History", HistorySchema);

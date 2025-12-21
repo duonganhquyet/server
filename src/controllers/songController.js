@@ -1,6 +1,6 @@
 // Viet cac phuong thuc get, post, put, delete
-import Song from "../model/song";
-import User from "../model/user"; // Import User model for population
+import Song from "../model/song.js";
+import User from "../model/user.js"; // Import User model for population
 
 export const getSongs = async (req, res) => {
     try {

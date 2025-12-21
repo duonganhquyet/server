@@ -1,8 +1,8 @@
 import express from "express";
-import { getHistory } from "../controllers/historyController";
+import { getListeningHistory } from "../controllers/historyController.js";
 
 const historyRouter = express.Router();
 
-historyRouter.get("/history", getHistory);
+historyRouter.get("/history", getListeningHistory);
 
 export default historyRouter;

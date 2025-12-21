@@ -1,46 +1,40 @@
-import mongoose from "mongoose";
-import History from "../model/history";
-import Song from "../model/song";
-import User from "../model/user";
-import Comment from "../model/comment";
+// IMPORT FILE CHỮ THƯỜNG
+import History from '../model/history.js'; 
+import Song from '../model/song.js';
+// Cần import User để populate hoạt động sâu (nested populate) nếu cần
+import User from '../model/user.js'; 
 
-export const getHistory = async (req, res) => {
-    try {
-        const history = await History.find()
-            .populate("track")
-            .sort({ listenedAt: -1 })
-            .limit(5);
+export const getListeningHistory = async (req, res) => {
+  try {
+    // Giả sử lấy tất cả lịch sử (sau này bạn có thể lọc theo req.user._id)
+    const history = await History.find()
+      .populate({
+        path: 'song_id',
+        populate: { path: 'uploader' } // Lấy luôn thông tin người đăng bài hát
+      })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .lean();
 
-        const result = await Promise.all(history.map(async (item) => {
-            const song = item.track;
-            if (!song) return null;
+    const formattedData = history.map(item => {
+      const song = item.song_id;
+      if (!song) return null;
 
-            let uploaderName = "Unknown Uploader";
-            if (song.uploader && mongoose.Types.ObjectId.isValid(song.uploader)) {
-                const uploader = await User.findById(song.uploader);
-                if (uploader) {
-                    uploaderName = uploader.name;
-                }
-            }
-            
-            const commentCount = await Comment.countDocuments({ track: song._id });
+      return {
+        id: item._id,
+        songId: song._id,
+        title: song.title,
+        artist: song.uploader?.username || "Unknown",
+        image: song.imgUrl || "",
+        plays: (song.countPlay || 0).toLocaleString(),
+        likes: (song.countLike || 0).toLocaleString(),
+      };
+    }).filter(item => item !== null);
 
-            return {
-                id: song._id,
-                artist: uploaderName,
-                title: song.title,
-                plays: song.countPlay ? song.countPlay.toLocaleString() : "0",
-                likes: song.countLike ? song.countLike.toLocaleString() : "0",
-                reposts: "0", 
-                comments: commentCount.toLocaleString(),
-                image: song.imgUrl
-            };
-        }));
+    res.status(200).json(formattedData);
 
-        const filteredResult = result.filter(item => item !== null);
-
-        return res.status(200).json(filteredResult);
-    } catch (error) {
-        return res.status(500).json({ message: error.message });
-    }
+  } catch (error) {
+    console.error("❌ LỖI HISTORY:", error);
+    res.status(500).json({ message: "Lỗi Server" });
+  }
 };
