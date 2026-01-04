@@ -62,6 +62,7 @@ songRouter.post("/upload", uploadAudio.array("files", 10), uploadSongs);
 
 // Upload / Update Cover Image
 songRouter.post("/songs/:id/cover", uploadImage.single("cover"), updateCover);
+<<<<<<< HEAD
 
 // Update Song Info (title, description, category, optional cover)
 const updateStorage = multer.diskStorage({
@@ -76,9 +77,38 @@ const updateStorage = multer.diskStorage({
     const ext = path.extname(file.originalname);
     cb(null, Date.now() + "-" + Math.round(Math.random() * 1e9) + ext);
   },
+=======
+songRouter.put("/songs/:id", updateSongInfo);
+songRouter.post("/songs", addSong); 
+songRouter.post('/songs', async (req, res) => {
+  try {
+    const newSong = new Song(req.body);
+    // Lưu ý: req.body cần chứa: title, description, imgUrl, trackUrl...
+    // và uploader (ID của admin đang đăng nhập)
+    await newSong.save();
+    res.status(201).json(newSong);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. UPDATE SONG (Sửa thông tin bài hát)
+songRouter.put('/songs/:id', async (req, res) => {
+  try {
+    const updatedSong = await Song.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    res.json(updatedSong);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+>>>>>>> 918fed78306346c3c2b230e549493072a67c513e
 });
 const uploadUpdate = multer({ storage: updateStorage });
 
+<<<<<<< HEAD
 songRouter.put(
   "/songs/:id",
   uploadUpdate.fields([
@@ -87,6 +117,17 @@ songRouter.put(
   ]),
   updateSongInfo
 );
+=======
+// 3. DELETE SONG (Xóa bài hát)
+songRouter.delete('/songs/:id', async (req, res) => {
+  try {
+    await Song.findByIdAndUpdate(req.params.id, { isDeleted: true });
+    res.json({ message: "Song deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+>>>>>>> 918fed78306346c3c2b230e549493072a67c513e
 
 // Add new song
 songRouter.post("/songs", addSong);
