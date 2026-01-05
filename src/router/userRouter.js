@@ -82,11 +82,9 @@ router.get("/users/stats", verifyToken, getUserStats);
 
 // 6. Upload Avatar
 // Controller dùng req.user.id để check quyền sở hữu vs req.params.id
-// Controller check req.file => Cần uploadAvatar.single("file")
-router.post("/users/:id/avatar", verifyToken, uploadAvatar.single("file"), updateAvatar);
+// Controller check req.file => Cần uploadAvatar.single("avatar")
+router.put("/:id/avatar", verifyToken, uploadAvatar.single("avatar"), updateAvatar);
 
-// 7. Lấy thông tin user công khai (Public Profile)
-// Route này bắt mọi link dạng /users/xxx nên phải để dưới cùng
-router.get("/users/:id", getPublicUser);
+
 
 export default router;

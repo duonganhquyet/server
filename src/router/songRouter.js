@@ -82,7 +82,8 @@ songRouter.delete("/song/:id/like", verifyToken, unlikeSong);
 // songRouter.delete("/song", (req, res) => {
 //     res.send("Hello World!");
 // });
-songRouter.get("/users/:id/songs", getSongsByUploader); // Lấy nhạc của user
+songRouter.get("/user/:id/songs", getSongsByUploader); // API Matches: /api/user/:id/songs
+// songRouter.get("/:id/songs", getSongsByUploader); // API Matches: /api/:id/songs
 
 // --- UPLOAD Routes ---
 // Upload nhiều file nhạc

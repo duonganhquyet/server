@@ -341,9 +341,26 @@ export const getSongsByUploader = async (req, res) => {
     try {
         const { id } = req.params;
         const songs = await Song.find({ uploader: id, isDeleted: false }).sort({ createdAt: -1 });
-        res.json({ songs });
+
+        if (!songs) {
+            return res.status(404).json({
+                statusCode: 404,
+                message: "Song not found",
+                data: null
+            });
+        }
+
+        res.status(200).json({
+            statusCode: 200,
+            message: "Get songs by uploader success",
+            data: songs
+        });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({
+            statusCode: 500,
+            message: err.message,
+            data: null
+        });
     }
 };
 
