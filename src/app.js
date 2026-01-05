@@ -48,7 +48,7 @@ app.use('/api', searchRouter);
 
 
 // Static files
-app.use('/filemp3', express.static(path.join(__dirname, '../filemp3')));
+app.use('/track', express.static(path.join(__dirname, '../filemp3')));
 app.use('/images', express.static(path.join(__dirname, '../images')));
 
 
