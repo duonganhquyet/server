@@ -210,8 +210,17 @@ export const uploadSongs = async (req, res) => {
 
         const songs = [];
         
-        // 1. Lấy ID User
-        const userId = req.user && req.user._id ? req.user._id : "693d8f6d53bc79c243c10737"; 
+        // --- SỬA 1: Logic lấy User ID ---
+        // Bắt buộc phải có token (đã qua middleware verifyToken)
+        const userId = req.user?.id || req.user?._id;
+        
+        if (!userId) {
+            return res.status(401).json({
+                statusCode: 401,
+                message: "Unauthorized: User ID not found",
+                data: null
+            });
+        } 
 
         // --- SỬA LOGIC TẠI ĐÂY: Xác định tên Tác giả (Description) ---
         let artistName = "Unknown Artist";
@@ -224,8 +233,9 @@ export const uploadSongs = async (req, res) => {
         for (const f of req.files) {
             const baseName = f.originalname.replace(/\.[^/.]+$/, "");
             
-            // Đổi path cho đúng với static folder
-            const trackPath = `/track/${f.filename}`;
+            // --- SỬA 2: Chỉ lưu tên file ---
+            // Frontend sẽ tự ghép đường dẫn nếu cần, hoặc cấu hình static path
+            const trackPath = f.filename;
 
             // Chuẩn hóa text (nếu có hàm normalizeText)
             const titleNorm = typeof normalizeText === 'function' ? normalizeText(baseName) : baseName.toLowerCase();
@@ -241,11 +251,12 @@ export const uploadSongs = async (req, res) => {
 
                 category: "General",
                 imgUrl: "", 
-                trackUrl: trackPath,
+
+                trackUrl: trackPath, 
                 uploader: userId,
                 countLike: 0,
                 countPlay: 0,
-                duration: 0
+                duration: 0 
             });
             songs.push(newSong);
         }
@@ -270,7 +281,7 @@ export const updateCover = async (req, res) => {
         if (!req.file) return res.status(400).json({ message: "Thiếu file ảnh" });
         
         // --- QUAN TRỌNG: Lưu vào folder images để Frontend hiển thị được ---
-        const imgPath = `/images/${req.file.filename}`;
+        const imgPath = `/images/imageTrack/${req.file.filename}`;
 
         const song = await Song.findByIdAndUpdate(
             req.params.id,
@@ -359,9 +370,26 @@ export const getSongsByUploader = async (req, res) => {
     try {
         const { id } = req.params;
         const songs = await Song.find({ uploader: id, isDeleted: false }).sort({ createdAt: -1 });
-        res.json({ songs });
+
+        if (!songs) {
+            return res.status(404).json({
+                statusCode: 404,
+                message: "Song not found",
+                data: null
+            });
+        }
+
+        res.status(200).json({
+            statusCode: 200,
+            message: "Get songs by uploader success",
+            data: songs
+        });
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        res.status(500).json({
+            statusCode: 500,
+            message: err.message,
+            data: null
+        });
     }
 };
 
@@ -373,9 +401,19 @@ export const deleteSong = async (req, res) => {
         if (!song) return res.status(404).json({ message: "Song not found" });
 
         // Xử lý đường dẫn để xóa file vật lý
-        // Vì trong DB lưu dạng "/filemp3/abc.mp3", ta cần bỏ dấu "/" đầu tiên đi để path.join hoạt động đúng từ root
         if (song.trackUrl) {
-            const relativePath = song.trackUrl.startsWith('/') ? song.trackUrl.substring(1) : song.trackUrl;
+            let relativePath = song.trackUrl.startsWith('/') ? song.trackUrl.substring(1) : song.trackUrl;
+            
+            // Nếu đường dẫn bắt đầu bằng 'track/' hoặc 'filemp3/' thì giữ nguyên logic cũ (có thể cần thay đổi mapping tùy cấu trúc folder)
+            // Nếu chỉ là tên file thì thêm 'filemp3/' vào trước
+            if (relativePath.startsWith('track/')) {
+                // Map /track/abc.mp3 -> filemp3/abc.mp3
+                relativePath = relativePath.replace('track/', 'filemp3/');
+            } else if (!relativePath.includes('/') && !relativePath.startsWith('filemp3/')) {
+                // Chỉ có tên file -> filemp3/filename
+                relativePath = `filemp3/${relativePath}`;
+            }
+
             const trackPath = path.join(process.cwd(), relativePath);
             if (fs.existsSync(trackPath)) fs.unlinkSync(trackPath);
         }

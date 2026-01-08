@@ -47,7 +47,7 @@ const uploadAudio = multer({ storage: audioStorage });
 // B. Lưu ảnh -> vào folder 'images' (Khớp với app.js)
 const imageStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, "../../images"); 
+    const dir = path.join(__dirname, "../../images/imageTrack"); 
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -82,11 +82,12 @@ songRouter.delete("/song/:id/like", verifyToken, unlikeSong);
 // songRouter.delete("/song", (req, res) => {
 //     res.send("Hello World!");
 // });
-songRouter.get("/users/:id/songs", getSongsByUploader); // Lấy nhạc của user
+songRouter.get("/user/:id/songs", getSongsByUploader); // API Matches: /api/user/:id/songs
+// songRouter.get("/:id/songs", getSongsByUploader); // API Matches: /api/:id/songs
 
 // --- UPLOAD Routes ---
 // Upload nhiều file nhạc
-songRouter.post("/upload", uploadAudio.array("files", 10), uploadSongs);
+songRouter.post("/upload", verifyToken, uploadAudio.array("files", 10), uploadSongs);
 
 // Upload ảnh bìa (Cover) cho 1 bài hát
 songRouter.post("/songs/:id/cover", uploadImage.single("cover"), updateCover);

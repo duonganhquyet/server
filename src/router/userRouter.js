@@ -27,10 +27,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const router = express.Router();
 
-// Config Multer
+router.get("/stats", verifyToken, getUserStats);
+router.get("/likes", verifyToken, getUserLikedSongs);
+router.get("/playlists", verifyToken, getUserPlaylists);
+router.get("/history", verifyToken, getUserHistory);
+router.get("/public/:id", getPublicUser);
+
+
+// 3. Config Multer (Để upload Avatar)
+// Controller logic xóa ảnh cũ trong folder "images", nên ta phải lưu mới vào đó
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, "../../images"); 
+    // Từ src/router lùi ra root -> vào folder images
+    const dir = path.join(__dirname, "../../images/avatar");
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     cb(null, dir);
   },
@@ -65,9 +74,12 @@ router.post("/users", verifyToken, createUser);
 router.put("/users/:id", verifyToken, updateUser);  
 router.delete("/users/:id", verifyToken, deleteUser);
 
-// --- 4. Dynamic Routes ---
-// Upload Avatar cũng nên quy về /user hoặc /users tùy logic
-router.post("/users/:id/avatar", verifyToken, uploadAvatar.single("file"), updateAvatar);
-router.get("/users/:id", getPublicUser);
+
+// --- C. NHÓM DYNAMIC (Có tham số :id - Phải đặt cuối cùng) ---
+
+// 6. Upload Avatar
+// Controller dùng req.user.id để check quyền sở hữu vs req.params.id
+// Controller check req.file => Cần uploadAvatar.single("avatar")
+router.put("/:id/avatar", verifyToken, uploadAvatar.single("avatar"), updateAvatar);
 
 export default router;
