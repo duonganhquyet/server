@@ -1,5 +1,6 @@
 import Playlist from "../model/playlist";
 import Song from "../model/song";
+import Favorite from "../model/favorite.js";
 import path from "path";
 
 export const createPlaylist = async (req, res) => {
@@ -97,7 +98,7 @@ export const getPlaylistTracks = async (req, res) => {
     }
 
     const playlist = await Playlist.findById(id)
-      .populate({ path: "tracks.track", model: Song });
+      .populate({ path: "tracks.track", model: Song, populate: { path: "uploader", select: "name" } });
 
     if (!playlist || playlist.isDeleted) {
       return res.status(404).json({
@@ -116,6 +117,10 @@ export const getPlaylistTracks = async (req, res) => {
       });
     }
 
+    // Build a set of liked track ids for this user
+    const favorites = await Favorite.find({ user: userId, isDeleted: false }).select("track");
+    const likedSet = new Set(favorites.map(f => String(f.track)));
+
     const songs = (playlist.tracks || [])
       .map(t => t?.track)
       .filter(Boolean)
@@ -123,6 +128,8 @@ export const getPlaylistTracks = async (req, res) => {
         id: s._id,
         title: s.title,
         imgUrl: s.imgUrl,
+        artistName: s.uploader?.name || undefined,
+        liked: likedSet.has(String(s._id)),
       }));
 
     return res.status(200).json({
@@ -141,6 +148,65 @@ export const getPlaylistTracks = async (req, res) => {
     });
   }
 };
+
+export const removeTrackFromPlaylist = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ statusCode: 401, message: "Unauthorized", data: null });
+    }
+
+    const { id, trackId } = req.params;
+    if (!id || !trackId) {
+      return res.status(400).json({ statusCode: 400, message: "playlist id and trackId are required", data: null });
+    }
+
+    const playlist = await Playlist.findById(id).populate({ path: "tracks.track", model: Song, populate: { path: "uploader", select: "name" } });
+    if (!playlist || playlist.isDeleted) {
+      return res.status(404).json({ statusCode: 404, message: "Playlist not found", data: null });
+    }
+
+    if (String(playlist.user) !== String(userId)) {
+      return res.status(403).json({ statusCode: 403, message: "Forbidden", data: null });
+    }
+
+    const beforeLen = (playlist.tracks || []).length;
+    playlist.tracks = (playlist.tracks || []).filter(t => String(t.track?._id || t.track) !== String(trackId));
+    const afterLen = playlist.tracks.length;
+
+    if (afterLen === beforeLen) {
+      return res.status(404).json({ statusCode: 404, message: "Track not found in playlist", data: null });
+    }
+
+    await playlist.save();
+
+    const favorites = await Favorite.find({ user: userId, isDeleted: false }).select("track");
+    const likedSet = new Set(favorites.map(f => String(f.track)));
+
+    const songs = (playlist.tracks || [])
+      .map(t => t?.track)
+      .filter(Boolean)
+      .map(s => ({
+        id: s._id,
+        title: s.title,
+        imgUrl: s.imgUrl,
+        artistName: s.uploader?.name || undefined,
+        liked: likedSet.has(String(s._id)),
+      }));
+
+    return res.status(200).json({
+      statusCode: 200,
+      message: "Removed track from playlist",
+      data: {
+        playlist: { id: playlist._id, title: playlist.title, description: playlist.description, isPublic: playlist.isPublic },
+        songs,
+      }
+    });
+  } catch (err) {
+    return res.status(500).json({ statusCode: 500, message: err.message, data: null });
+  }
+};
+
 
 export const updatePlaylistCover = async (req, res) => {
   try {

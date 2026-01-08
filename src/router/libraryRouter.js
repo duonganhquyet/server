@@ -1,6 +1,6 @@
 import express from "express";
 import { verifyToken } from "../middleware/authMiddleware";
-import { createPlaylist, getPlaylistTracks, updatePlaylistCover, updatePlaylist, deletePlaylist, addTrackToPlaylist } from "../controllers/libraryController";
+import { createPlaylist, getPlaylistTracks, updatePlaylistCover, updatePlaylist, deletePlaylist, addTrackToPlaylist, removeTrackFromPlaylist } from "../controllers/libraryController";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -33,6 +33,7 @@ router.get("/library/playlists/:id/tracks", verifyToken, getPlaylistTracks);
 
 // Add track to a playlist
 router.post("/library/playlists/:id/tracks", verifyToken, addTrackToPlaylist);
+router.delete("/library/playlists/:id/tracks/:trackId", verifyToken, removeTrackFromPlaylist);
 
 // Upload/update playlist cover
 router.post(
