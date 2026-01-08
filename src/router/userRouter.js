@@ -80,6 +80,6 @@ router.delete("/users/:id", verifyToken, deleteUser);
 // 6. Upload Avatar
 // Controller dùng req.user.id để check quyền sở hữu vs req.params.id
 // Controller check req.file => Cần uploadAvatar.single("avatar")
-router.put("/:id/avatar", verifyToken, uploadAvatar.single("avatar"), updateAvatar);
+router.put("/user/:id/avatar", verifyToken, uploadAvatar.single("avatar"), updateAvatar);
 
 export default router;
