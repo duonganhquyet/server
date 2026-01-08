@@ -1,29 +1,27 @@
 import express from "express";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import {
-  getUserLikedSongs,
-  getUserPlaylists,
-  getUserHistory,
-  checkUsername,
-  getListeningHistory,
   register,
   login,
+  checkUsername,
   me,
   getUserStats,
+  getUserLikedSongs,
+  getUserPlaylists,
+  getUserHistory, // Hàm lấy lịch sử cho trang cá nhân
+  getListeningHistory, // Hàm lấy lịch sử (có thể dùng chung)
   getPublicUser,
-  updateAvatar
-  
+  updateAvatar,
+  getAllUsers, 
+  createUser,
+  updateUser,
+  deleteUser
 } from "../controllers/userController.js";
-import { User } from '../model/user.js'; // Nhớ import model User của bạn
 import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-
-// 2. Setup Middleware xác thực (Cần thiết vì controller dùng req.user)
-
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -47,35 +45,34 @@ const avatarStorage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    // Đặt tên file unique để tránh trùng
     cb(null, `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`);
   },
 });
 const uploadAvatar = multer({ storage: avatarStorage });
 
-/* ================= ĐỊNH NGHĨA ROUTE ================= */
+/* ========================================================
+   SỬA LẠI CÁC ROUTE ĐỂ KHỚP VỚI FRONTEND (/api/user/...)
+======================================================== */
 
-// --- A. NHÓM PUBLIC (Không cần đăng nhập) ---
-
-// 1. Đăng ký & Đăng nhập
+// --- 1. Auth & Public ---
 router.post("/auth/register", register);
 router.post("/auth/login", login);
-
-// 2. Kiểm tra user tồn tại (Controller dùng req.query.username)
-// Gọi: /api/users/check?username=abc
 router.get("/users/check", checkUsername); 
-
-
-// --- B. NHÓM PRIVATE (Cần đăng nhập - verifyToken) ---
-
-// 3. Lấy thông tin chính mình
 router.get("/auth/me", verifyToken, me);
 
-// 4. Lấy lịch sử nghe nhạc
-router.get("/users/history", verifyToken, getListeningHistory);
+// --- 2. User Features (Cá nhân) ---
+// ✅ SỬA: Thêm chữ "/user" vào trước để khớp với Frontend gọi /api/user/history
+router.get("/user/history", verifyToken, getUserHistory); 
+router.get("/user/stats", verifyToken, getUserStats);
+router.get("/user/likes", verifyToken, getUserLikedSongs);
+router.get("/user/playlists", verifyToken, getUserPlaylists);
 
-// 5. Lấy thống kê (số bài upload, playlist...)
-router.get("/users/stats", verifyToken, getUserStats);
+// --- 3. ADMIN MANAGEMENT ---
+// Route Admin giữ nguyên /users (số nhiều)
+router.get("/users", verifyToken, getAllUsers);     
+router.post("/users", verifyToken, createUser);     
+router.put("/users/:id", verifyToken, updateUser);  
+router.delete("/users/:id", verifyToken, deleteUser);
 
 
 // --- C. NHÓM DYNAMIC (Có tham số :id - Phải đặt cuối cùng) ---
@@ -84,7 +81,5 @@ router.get("/users/stats", verifyToken, getUserStats);
 // Controller dùng req.user.id để check quyền sở hữu vs req.params.id
 // Controller check req.file => Cần uploadAvatar.single("avatar")
 router.put("/:id/avatar", verifyToken, uploadAvatar.single("avatar"), updateAvatar);
-
-
 
 export default router;
