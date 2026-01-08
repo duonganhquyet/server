@@ -23,8 +23,8 @@ const __dirname = dirname(__filename);
 dotenv.config();
 const app = express();
 
-app.use(cors()); 
-app.use(express.json());
+
+app.use(express.json()); 
 
 // Connect to MongoDB
 connectDB(process.env.MONGO_URI);
@@ -48,5 +48,6 @@ app.use('/api', searchRouter);
 // Static files
 app.use('/track', express.static(path.join(__dirname, '../filemp3')));
 app.use('/images', express.static(path.join(__dirname, '../images')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 export const viteNodeApp = app;

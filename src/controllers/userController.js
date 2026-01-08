@@ -1,12 +1,11 @@
 import User from "../model/user.js";
 import jwt from "jsonwebtoken";
-import Song from "../model/song";
-import Favorite from "../model/favorite";
-import Playlist from "../model/playlist";
-import History from "../model/history";
-import jwt from "jsonwebtoken";
-import path from "path";
+import Song from "../model/song.js";
+import Favorite from "../model/favorite.js";
+import Playlist from "../model/playlist.js";
+import History from "../model/history.js";
 import fs from "fs";
+import path from "path";
 
 // Check username availability
 export const checkUsername = async (req, res) => {
