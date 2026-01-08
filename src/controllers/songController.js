@@ -210,29 +210,42 @@ export const uploadSongs = async (req, res) => {
 
         const songs = [];
         
-        // --- SỬA 1: Logic lấy User ID ---
-        // Nếu đã đăng nhập (có req.user) thì lấy ID thật, nếu không thì dùng ID giả
+        // 1. Lấy ID User
         const userId = req.user && req.user._id ? req.user._id : "693d8f6d53bc79c243c10737"; 
+
+        // --- SỬA LOGIC TẠI ĐÂY: Xác định tên Tác giả (Description) ---
+        let artistName = "Unknown Artist";
+        if (req.user) {
+            // Ưu tiên lấy Name -> Nếu không có thì lấy Username -> Cuối cùng mới là Unknown
+            artistName = req.user.name || req.user.username || "Unknown Artist";
+        }
+        // -------------------------------------------------------------
 
         for (const f of req.files) {
             const baseName = f.originalname.replace(/\.[^/.]+$/, "");
             
-            // --- SỬA 2: Đổi /filemp3/ thành /track/ ---
-            // Vì app.js khai báo: app.use('/track', express.static...)
+            // Đổi path cho đúng với static folder
             const trackPath = `/track/${f.filename}`;
+
+            // Chuẩn hóa text (nếu có hàm normalizeText)
+            const titleNorm = typeof normalizeText === 'function' ? normalizeText(baseName) : baseName.toLowerCase();
+            const descNorm = typeof normalizeText === 'function' ? normalizeText(artistName) : artistName.toLowerCase();
 
             const newSong = await Song.create({
                 title: baseName,
-                // Đảm bảo bạn có hàm normalizeText, nếu không thì dùng baseName tạm
-                title_normalized: typeof normalizeText === 'function' ? normalizeText(baseName) : baseName.toLowerCase(),
-                description: "Unknown Artist",
+                title_normalized: titleNorm,
+                
+                // ✅ Gán tên người dùng vào description
+                description: artistName, 
+                description_normalized: descNorm, 
+
                 category: "General",
                 imgUrl: "", 
-                trackUrl: trackPath, // ✅ Lưu đúng đường dẫn này thì Frontend mới play được
+                trackUrl: trackPath,
                 uploader: userId,
                 countLike: 0,
                 countPlay: 0,
-                duration: 0 // Nên thêm trường này (mặc định 0), sau này update sau
+                duration: 0
             });
             songs.push(newSong);
         }
@@ -243,7 +256,7 @@ export const uploadSongs = async (req, res) => {
             data: songs 
         });
     } catch (error) {
-        console.error("Upload Error:", error); // Log ra console server để dễ debug
+        console.error("Upload Error:", error);
         res.status(500).json({
             statusCode: 500,
             message: error.message,
