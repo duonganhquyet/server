@@ -3,4 +3,6 @@ dist
 coverage
 .DS_Store
 filemp3
-images
+images/*
+!images/imageTrack/
+!images/imageTrack/.gitkeep

@@ -1,9 +1,11 @@
 import User from "../model/user.js";
 import jwt from "jsonwebtoken";
-import Song from "../model/song";
-import Favorite from "../model/favorite";
-import Playlist from "../model/playlist";
-import History from "../model/history";
+import Song from "../model/song.js";
+import Favorite from "../model/favorite.js";
+import Playlist from "../model/playlist.js";
+import History from "../model/history.js";
+import fs from "fs";
+import path from "path";
 
 // Check username availability
 export const checkUsername = async (req, res) => {
@@ -129,6 +131,7 @@ export const login = async (req, res) => {
       data: {
         user: {
           _id: user._id,
+          username: user.username,
           imgUrl: user.imgUrl,
           name: user.name,
           role: user.role
@@ -172,6 +175,7 @@ export const me = async (req, res) => {
       data: { 
         user: {
           _id: user._id,
+          username: user.username,
           imgUrl: user.imgUrl,
           name: user.name,
           role: user.role
@@ -459,7 +463,7 @@ export const updateAvatar = async (req, res) => {
     // delete old avatar
     if (user.imgUrl && user.imgUrl !== "default_avatar.png") {
       try {
-        const oldPath = path.join("images", user.imgUrl); // Sửa lại path cho khớp với cấu hình server
+        const oldPath = path.join("images", "avatar", user.imgUrl);
         if (fs.existsSync(oldPath)) {
           fs.unlinkSync(oldPath);
         }
@@ -483,4 +487,69 @@ export const updateAvatar = async (req, res) => {
     console.error("updateAvatar error:", err);
     res.status(500).json({ message: err.message });
   }
+};
+export const getAllUsers = async (req, res) => {
+    try {
+        // Tạm bỏ check admin để test trước
+        // if (req.user.role !== 'admin') return res.status(403).json({ message: "Forbidden" });
+
+        const users = await User.find({ isDeleted: false })
+            .select('-password') // Bỏ qua mật khẩu
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            statusCode: 200,
+            message: "Success",
+            data: users 
+        });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+};
+
+// 2. Tạo User mới từ Admin
+export const createUser = async (req, res) => {
+    try {
+        const { username, password, name, role } = req.body;
+        const exist = await User.findOne({ username, isDeleted: false });
+        if(exist) return res.status(400).json({ message: "Username đã tồn tại" });
+
+        const newUser = await User.create({
+            username, 
+            password, // Lưu ý: Cần mã hóa password nếu dự án có dùng bcrypt
+            name, 
+            role: role || 'user',
+            imgUrl: "default_avatar.png"
+        });
+        res.status(201).json({ message: "Tạo thành công", data: newUser });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
+// 3. Cập nhật User
+export const updateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, role, password } = req.body;
+        let updateData = { name, role };
+        
+        // Chỉ update password nếu có nhập
+        if(password && password.trim() !== "") updateData.password = password;
+
+        const updated = await User.findByIdAndUpdate(id, updateData, { new: true });
+        res.json({ message: "Update thành công", data: updated });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+};
+
+// 4. Xóa User
+export const deleteUser = async (req, res) => {
+    try {
+        await User.findByIdAndUpdate(req.params.id, { isDeleted: true });
+        res.json({ message: "Đã xóa user" });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
 };

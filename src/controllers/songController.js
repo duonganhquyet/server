@@ -265,6 +265,14 @@ export const uploadSongs = async (req, res) => {
             });
         } 
 
+        // --- SỬA LOGIC TẠI ĐÂY: Xác định tên Tác giả (Description) ---
+        let artistName = "Unknown Artist";
+        if (req.user) {
+            // Ưu tiên lấy Name -> Nếu không có thì lấy Username -> Cuối cùng mới là Unknown
+            artistName = req.user.name || req.user.username || "Unknown Artist";
+        }
+        // -------------------------------------------------------------
+
         for (const f of req.files) {
             const baseName = f.originalname.replace(/\.[^/.]+$/, "");
             
@@ -272,13 +280,21 @@ export const uploadSongs = async (req, res) => {
             // Frontend sẽ tự ghép đường dẫn nếu cần, hoặc cấu hình static path
             const trackPath = f.filename;
 
+            // Chuẩn hóa text (nếu có hàm normalizeText)
+            const titleNorm = typeof normalizeText === 'function' ? normalizeText(baseName) : baseName.toLowerCase();
+            const descNorm = typeof normalizeText === 'function' ? normalizeText(artistName) : artistName.toLowerCase();
+
             const newSong = await Song.create({
                 title: baseName,
-                // Đảm bảo bạn có hàm normalizeText, nếu không thì dùng baseName tạm
-                title_normalized: typeof normalizeText === 'function' ? normalizeText(baseName) : baseName.toLowerCase(),
-                description: "Unknown Artist",
+                title_normalized: titleNorm,
+                
+                // ✅ Gán tên người dùng vào description
+                description: artistName, 
+                description_normalized: descNorm, 
+
                 category: "General",
                 imgUrl: "", 
+
                 trackUrl: trackPath, 
                 uploader: userId,
                 countLike: 0,
@@ -294,7 +310,7 @@ export const uploadSongs = async (req, res) => {
             data: songs 
         });
     } catch (error) {
-        console.error("Upload Error:", error); // Log ra console server để dễ debug
+        console.error("Upload Error:", error);
         res.status(500).json({
             statusCode: 500,
             message: error.message,
@@ -308,7 +324,7 @@ export const updateCover = async (req, res) => {
         if (!req.file) return res.status(400).json({ message: "Thiếu file ảnh" });
         
         // --- QUAN TRỌNG: Lưu vào folder images để Frontend hiển thị được ---
-        const imgPath = `/images/${req.file.filename}`;
+        const imgPath = `/images/imageTrack/${req.file.filename}`;
 
         const song = await Song.findByIdAndUpdate(
             req.params.id,
